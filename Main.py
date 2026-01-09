@@ -1,6 +1,7 @@
 import can
 from ecu_state import ECUState
 from services.service_10_session import handle_session
+from services.service_27_security import handle_security
 
 # Initialize CAN (virtual CAN example)
 bus = can.interface.Bus(channel='vcan0', bustype='socketcan')
@@ -18,11 +19,17 @@ while True:
     data = list(msg.data)
     sid = data[0]
 
-    # Diagnostic Session Control
     if sid == 0x10:
         response = handle_session(state, data)
+
+    elif sid == 0x27:
+        if state.session != 0x03:
+            response = [0x7F, 0x27, 0x7E]
+        else:
+            response = handle_security(state, data)
+
     else:
-        response = [0x7F, sid, 0x11]  # Service not supported
+        response = [0x7F, sid, 0x11]
 
     bus.send(
         can.Message(
@@ -30,4 +37,4 @@ while True:
             data=response,
             is_extended_id=False
         )
-    )
+        )
